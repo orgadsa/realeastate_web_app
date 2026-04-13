@@ -1,3 +1,7 @@
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
 playwright>=1.40.0
 playwright-stealth>=2.0.0
 pydantic>=2.5.0
