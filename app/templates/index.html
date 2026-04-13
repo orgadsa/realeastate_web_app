@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול נכסים</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { heebo: ['Heebo', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#fef2f2', 100: '#fee2e2', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { font-family: 'Heebo', sans-serif; }
+        .star { cursor: pointer; transition: color 0.15s; }
+        .star:hover, .star.active { color: #f59e0b; }
+        .editable:hover { background-color: #f9fafb; }
+        .editable:focus { outline: none; background-color: #eff6ff; box-shadow: inset 0 0 0 2px #3b82f6; }
+        .status-badge { font-size: 0.8rem; padding: 0.2rem 0.7rem; border-radius: 9999px; white-space: nowrap; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .toast { position: fixed; top: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 1000; transition: opacity 0.4s; }
+        .property-thumb { width: 120px; height: 80px; object-fit: cover; border-radius: 8px; }
+        select.status-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 0.5rem center; padding-left: 1.5rem; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen">
+
+<!-- Toast -->
+<div id="toast" class="toast hidden">
+    <div class="bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium"></div>
+</div>
+
+<!-- Loading overlay for import -->
+<div id="importOverlay" class="hidden fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-8 shadow-2xl text-center max-w-sm">
+        <div class="animate-spin w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p class="text-lg font-semibold text-gray-700">מייבא את הנכס...</p>
+        <p class="text-sm text-gray-400 mt-1">זה יכול לקחת עד דקה</p>
+    </div>
+</div>
+
+<div class="flex min-h-screen">
+
+<!-- Sidebar -->
+<aside class="w-56 bg-white border-l border-gray-200 flex flex-col shadow-sm">
+    <div class="p-5 border-b border-gray-100">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+            </div>
+            <span class="font-bold text-lg text-gray-800">ניהול נכסים</span>
+        </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+        <a href="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-50 text-brand-700 font-medium text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+            דשבורד
+        </a>
+        <a href="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            מאגר הנכסים
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            אנליטיקה ודוחות
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            הגדרות
+        </a>
+    </nav>
+</aside>
+
+<!-- Main -->
+<main class="flex-1 flex flex-col">
+
+    <!-- Top bar - import -->
+    <header class="bg-white border-b border-gray-200 px-6 py-4">
+        <form id="importForm" class="flex items-center gap-3 max-w-2xl mx-auto" onsubmit="return handleImport(event)">
+            <input
+                id="urlInput"
+                type="url"
+                placeholder="כאן מדביקים את הלינק לנכס"
+                class="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
+                dir="ltr"
+                required
+            >
+            <button type="submit" class="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                ייבא נכס
+            </button>
+        </form>
+    </header>
+
+    <div class="flex-1 p-6 space-y-6 overflow-auto">
+
+        <!-- Stats -->
+        <div class="grid grid-cols-4 gap-4">
+            <div class="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ stats.total }}</div>
+                    <div class="text-xs text-gray-500">נכסים במעקב</div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
+                <div class="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ stats.visited }}</div>
+                    <div class="text-xs text-gray-500">נכסים שביקרתי בהם</div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
+                <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/></svg>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ stats.negotiation }}</div>
+                    <div class="text-xs text-gray-500">נכסים במו"מ פעיל</div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
+                <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">{{ stats.new }}</div>
+                    <div class="text-xs text-gray-500">נכסים חדשים</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table section -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <!-- Table header bar -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <h2 class="font-semibold text-gray-700">נכסים שאת/ה עוקב/ת אחריהם</h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-500">סינון לפי:</span>
+                    <select id="statusFilter" onchange="filterByStatus(this.value)" class="status-select border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-brand-500 outline-none">
+                        <option value="הכל" {% if current_filter == 'הכל' %}selected{% endif %}>הכל</option>
+                        {% for s in statuses %}
+                        <option value="{{ s }}" {% if current_filter == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-500 text-xs">
+                            <th class="py-3 px-3 font-medium text-right">דירוג</th>
+                            <th class="py-3 px-3 font-medium text-right">פרטי נכס</th>
+                            <th class="py-3 px-3 font-medium text-right w-32"></th>
+                            <th class="py-3 px-3 font-medium text-right">כתובת</th>
+                            <th class="py-3 px-3 font-medium text-right">סטטוס</th>
+                            <th class="py-3 px-3 font-medium text-right">הערות</th>
+                            <th class="py-3 px-3 font-medium text-right">משימה לביצוע</th>
+                            <th class="py-3 px-3 font-medium text-right">איש קשר</th>
+                            <th class="py-3 px-3 font-medium text-center w-10"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="propertiesBody">
+                    {% if properties|length == 0 %}
+                        <tr>
+                            <td colspan="9" class="py-16 text-center text-gray-400">
+                                <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 0h.008v.008h-.008V7.5z"/></svg>
+                                <p class="font-medium">אין נכסים עדיין</p>
+                                <p class="text-sm mt-1">הדבק לינק למודעה בשורה למעלה כדי להתחיל</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                    {% for p in properties %}
+                        <tr class="border-t border-gray-100 hover:bg-gray-50/50 transition-colors fade-in" data-id="{{ p.id }}">
+                            <!-- Rating -->
+                            <td class="py-3 px-3 align-top">
+                                <div class="flex gap-0.5 rating-group" data-id="{{ p.id }}" data-rating="{{ p.rating or 0 }}">
+                                    {% for i in range(1, 6) %}
+                                    <span class="star text-lg {% if i <= (p.rating or 0)|int %}active text-amber-400{% else %}text-gray-300{% endif %}"
+                                          data-value="{{ i }}"
+                                          onclick="setRating({{ p.id }}, {{ i }})">★</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <!-- Property details -->
+                            <td class="py-3 px-3 align-top max-w-[200px]">
+                                <div class="font-semibold text-gray-800">{{ p.city or '' }}{% if p.price %}, {{ p.price }}{% endif %}</div>
+                                <div class="text-xs text-gray-500 mt-0.5 space-x-reverse space-x-1">
+                                    {% if p.rooms %}<span>{{ p.rooms }} חדרים</span>{% endif %}
+                                    {% if p.size_sqm %}<span>{{ p.size_sqm }} מטר</span>{% endif %}
+                                </div>
+                                <div class="flex flex-wrap gap-1 mt-1.5">
+                                    {% if p.has_parking %}<span class="inline-block bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded">חניה</span>{% endif %}
+                                    {% if p.has_elevator %}<span class="inline-block bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded">מעלית</span>{% endif %}
+                                    {% if p.has_balcony %}<span class="inline-block bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded">מרפסת</span>{% endif %}
+                                    {% if p.has_mamad %}<span class="inline-block bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded">ממ״ד</span>{% endif %}
+                                    {% if p.has_air_conditioning %}<span class="inline-block bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded">מיזוג</span>{% endif %}
+                                </div>
+                            </td>
+                            <!-- Thumbnail -->
+                            <td class="py-3 px-3 align-top">
+                                {% if p.images and p.images|length > 0 %}
+                                <img src="{{ p.images[0] }}" class="property-thumb" alt="תמונת נכס" loading="lazy" onerror="this.style.display='none'">
+                                {% else %}
+                                <div class="w-[120px] h-[80px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v13.5A1.5 1.5 0 003.75 21z"/></svg>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <!-- Address -->
+                            <td class="py-3 px-3 align-top">
+                                <div class="font-medium text-gray-700">{{ p.address or '' }}</div>
+                                {% if p.floor %}
+                                <div class="text-xs text-gray-400 mt-0.5">קומה {{ p.floor }}{% if p.total_floors %}/{{ p.total_floors }}{% endif %}</div>
+                                {% endif %}
+                            </td>
+                            <!-- Status -->
+                            <td class="py-3 px-3 align-top">
+                                <select class="status-select border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-brand-500 outline-none w-full"
+                                        onchange="updateField({{ p.id }}, 'status', this.value)">
+                                    {% for s in statuses %}
+                                    <option value="{{ s }}" {% if p.status == s %}selected{% endif %}>{{ s }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <!-- Notes -->
+                            <td class="py-3 px-3 align-top max-w-[180px]">
+                                <div contenteditable="true"
+                                     class="editable rounded-lg px-2 py-1.5 text-xs min-h-[40px] border border-transparent hover:border-gray-200 focus:border-blue-300"
+                                     data-field="notes"
+                                     data-id="{{ p.id }}"
+                                     onblur="saveEditable(this)">{{ p.notes or '' }}</div>
+                            </td>
+                            <!-- Tasks -->
+                            <td class="py-3 px-3 align-top max-w-[180px]">
+                                <div contenteditable="true"
+                                     class="editable rounded-lg px-2 py-1.5 text-xs min-h-[40px] border border-transparent hover:border-gray-200 focus:border-blue-300"
+                                     data-field="tasks"
+                                     data-id="{{ p.id }}"
+                                     onblur="saveEditable(this)">{{ p.tasks or '' }}</div>
+                            </td>
+                            <!-- Contact -->
+                            <td class="py-3 px-3 align-top">
+                                {% if p.contact_name or p.contact_phone %}
+                                <div class="text-sm font-medium text-gray-700">{{ p.contact_name or '' }}</div>
+                                {% if p.contact_phone %}
+                                <div class="flex items-center gap-2 mt-1">
+                                    <a href="tel:{{ p.contact_phone }}" class="text-gray-400 hover:text-brand-500" title="התקשר">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                    </a>
+                                    <a href="https://wa.me/972{{ p.contact_phone[1:] | replace('-','') }}" target="_blank" class="text-gray-400 hover:text-green-500" title="WhatsApp">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                    </a>
+                                </div>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-xs text-gray-400">—</span>
+                                {% endif %}
+                            </td>
+                            <!-- Delete -->
+                            <td class="py-3 px-1 align-top">
+                                <button onclick="deleteProperty({{ p.id }})" class="text-gray-300 hover:text-red-500 transition-colors p-1" title="מחק נכס">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            {% if properties|length > 0 %}
+            <div class="px-5 py-3 border-t border-gray-100 text-xs text-gray-400">
+                מציג {{ properties|length }} נכסים
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</main>
+</div>
+
+<script>
+function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    const inner = t.querySelector('div');
+    inner.textContent = msg;
+    inner.className = isError
+        ? 'bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium'
+        : 'bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium';
+    t.classList.remove('hidden');
+    setTimeout(() => t.classList.add('hidden'), 3000);
+}
+
+async function handleImport(e) {
+    e.preventDefault();
+    const url = document.getElementById('urlInput').value.trim();
+    if (!url) return false;
+
+    document.getElementById('importOverlay').classList.remove('hidden');
+
+    try {
+        const res = await fetch('/api/import', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url}),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            document.getElementById('importOverlay').classList.add('hidden');
+            showToast(data.error || 'שגיאה', true);
+            return false;
+        }
+        showToast('הסקרייפינג התחיל! הדף יתרענן בעוד רגע...', false);
+        document.getElementById('urlInput').value = '';
+        setTimeout(() => location.reload(), 60000);
+        pollForNewProperty();
+    } catch (err) {
+        document.getElementById('importOverlay').classList.add('hidden');
+        showToast('שגיאת רשת', true);
+    }
+    return false;
+}
+
+async function pollForNewProperty() {
+    const startCount = document.querySelectorAll('#propertiesBody tr[data-id]').length;
+    for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        try {
+            const res = await fetch('/api/stats');
+            const stats = await res.json();
+            if (stats.total > startCount) {
+                document.getElementById('importOverlay').classList.add('hidden');
+                showToast('הנכס יובא בהצלחה!', false);
+                setTimeout(() => location.reload(), 500);
+                return;
+            }
+        } catch {}
+    }
+    document.getElementById('importOverlay').classList.add('hidden');
+    showToast('הייבוא לקח יותר מדי זמן, נסה לרענן', true);
+}
+
+async function updateField(id, field, value) {
+    try {
+        await fetch(`/api/properties/${id}`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({field, value}),
+        });
+    } catch {}
+}
+
+function saveEditable(el) {
+    const id = el.dataset.id;
+    const field = el.dataset.field;
+    const value = el.innerText.trim();
+    updateField(id, field, value);
+}
+
+function setRating(id, value) {
+    updateField(id, 'rating', String(value));
+    const group = document.querySelector(`.rating-group[data-id="${id}"]`);
+    if (group) {
+        group.querySelectorAll('.star').forEach(s => {
+            const v = parseInt(s.dataset.value);
+            s.classList.toggle('active', v <= value);
+            s.classList.toggle('text-amber-400', v <= value);
+            s.classList.toggle('text-gray-300', v > value);
+        });
+    }
+}
+
+async function deleteProperty(id) {
+    if (!confirm('למחוק את הנכס הזה?')) return;
+    try {
+        await fetch(`/api/properties/${id}`, {method: 'DELETE'});
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (row) row.remove();
+        showToast('הנכס נמחק', false);
+    } catch {
+        showToast('שגיאה במחיקה', true);
+    }
+}
+
+function filterByStatus(val) {
+    const params = val === 'הכל' ? '' : `?status=${encodeURIComponent(val)}`;
+    location.href = '/' + params;
+}
+</script>
+</body>
+</html>
