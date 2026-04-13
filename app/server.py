@@ -34,13 +34,16 @@ def startup():
 async def index(request: Request, status: str | None = None):
     properties = get_all_properties(status_filter=status)
     stats = get_stats()
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "properties": properties,
-        "stats": stats,
-        "statuses": STATUSES,
-        "current_filter": status or "הכל",
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "properties": properties,
+            "stats": stats,
+            "statuses": STATUSES,
+            "current_filter": status or "הכל",
+        },
+    )
 
 
 @app.post("/api/import")
