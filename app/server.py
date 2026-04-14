@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -19,6 +20,14 @@ from app.database import (
 
 BASE_DIR = Path(__file__).parent
 app = FastAPI(title="ניהול נכסים")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
@@ -76,6 +85,19 @@ async def _scrape_and_save(url: str):
         upsert_property(data)
     except Exception as e:
         print(f"Scraping error for {url}: {e}")
+
+
+@app.post("/api/push")
+async def push_property(request: Request):
+    """
+    Receive scraped listing data directly (from local CLI).
+    Usage: python3 -m scraper --push <render-url> <yad2-link>
+    """
+    body = await request.json()
+    if not body.get("url"):
+        return JSONResponse({"error": "url field is required"}, status_code=400)
+    prop_id = upsert_property(body)
+    return JSONResponse({"status": "ok", "id": prop_id})
 
 
 @app.patch("/api/properties/{prop_id}")

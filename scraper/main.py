@@ -145,6 +145,29 @@ def _print_listing(listing: Listing) -> None:
     console.print(Panel(table, title=f"[bold green]✓ {listing.address or listing.url}[/]", border_style="green"))
 
 
+def _push_to_remote(listings: list[Listing], remote_url: str) -> None:
+    """Push scraped listings to a remote server via /api/push."""
+    import urllib.request
+
+    base = remote_url.rstrip("/")
+    endpoint = f"{base}/api/push"
+
+    for listing in listings:
+        data = json.dumps(listing.model_dump(), ensure_ascii=False).encode("utf-8")
+        req = urllib.request.Request(
+            endpoint,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                result = json.loads(resp.read())
+                console.print(f"[bold green]✓ Pushed[/] {listing.address or listing.url} → {base}")
+        except Exception as exc:
+            console.print(f"[bold red]✗ Push failed for {listing.url}:[/] {exc}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Scrape Israeli real-estate listings (Yad2, Madlan)"
@@ -176,6 +199,10 @@ def main() -> None:
     parser.add_argument(
         "--to-csv", type=str, default=None,
         help="Convert an existing JSON file to CSV (no scraping). Example: --to-csv output/listing.json"
+    )
+    parser.add_argument(
+        "--push", type=str, default=None,
+        help="Push scraped data to a remote server. Example: --push https://your-app.onrender.com"
     )
     args = parser.parse_args()
 
@@ -224,6 +251,10 @@ def main() -> None:
     use_sheets = args.sheet or args.sheet_url
     if use_sheets:
         _export_to_sheets(listings, sheet_url=args.sheet_url)
+
+    # --- Push to remote server ---
+    if args.push:
+        _push_to_remote(listings, args.push)
 
     # --- JSON export (always, as backup) ---
     if len(listings) == 1:
