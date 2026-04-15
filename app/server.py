@@ -39,6 +39,32 @@ def startup():
     init_db()
 
 
+@app.get("/share", response_class=HTMLResponse)
+async def share_import(request: Request, background_tasks: BackgroundTasks, url: str = ""):
+    """Accept a property URL via GET (for iOS Shortcuts / share sheet integration)."""
+    url = url.strip()
+    if not url:
+        return templates.TemplateResponse(
+            request=request,
+            name="share.html",
+            context={"status": "error", "message": "לא התקבל לינק"},
+        )
+
+    if "yad2.co.il" not in url and "madlan.co.il" not in url:
+        return templates.TemplateResponse(
+            request=request,
+            name="share.html",
+            context={"status": "error", "message": "הלינק חייב להיות מ-yad2 או madlan"},
+        )
+
+    background_tasks.add_task(_scrape_and_save, url)
+    return templates.TemplateResponse(
+        request=request,
+        name="share.html",
+        context={"status": "ok", "message": "הנכס בדרך! הוא יופיע בדשבורד בעוד כמה שניות"},
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, status: str | None = None):
     properties = get_all_properties(status_filter=status)

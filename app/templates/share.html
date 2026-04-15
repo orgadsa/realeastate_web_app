@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ייבוא נכס</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>* { font-family: 'Heebo', sans-serif; }</style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
+        {% if status == 'ok' %}
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+        <h1 class="text-xl font-bold text-gray-800 mb-2">הנכס בדרך!</h1>
+        <p class="text-gray-500 text-sm mb-6">{{ message }}</p>
+        <a href="/" class="inline-block bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-full text-sm font-medium transition-colors">
+            לדשבורד
+        </a>
+        {% else %}
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-5">
+            <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </div>
+        <h1 class="text-xl font-bold text-gray-800 mb-2">משהו השתבש</h1>
+        <p class="text-gray-500 text-sm mb-6">{{ message }}</p>
+        <a href="/" class="inline-block bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2.5 rounded-full text-sm font-medium transition-colors">
+            חזרה לדשבורד
+        </a>
+        {% endif %}
+    </div>
+</body>
+</html>
